@@ -74,26 +74,40 @@ int main(void){
 
 //instead of doing above and rendering to window, we will rend to rectangle using SDL_Rect
   SDL_Rect dest; //rect structure
+  SDL_Rect ball;
+  SDL_Rect intersect;
 //get dimensions of the texture
   SDL_QueryTexture(tex,NULL,NULL, &dest.w,&dest.h);
 
   //make image smaller
   dest.w /= 4;
-  dest.h /= 8;
+  dest.h /= 28;
 
-  //position rectangle in middle of screen
+  ball.w = 12;
+  ball.h = 12;
+
+  //position rectangle in middle bottom of screen
   float xpos = (WINDOW_WIDTH - dest.w)/2;
-  float ypos = (WINDOW_HEIGHT - dest.h)/2;
+  float ypos = (WINDOW_HEIGHT - 3*dest.h);
 
-  //give rectangle initial velocity
-  float xvel = SPEED;
-  float yvel = SPEED;
+  //position for the ball with start at the middle of the screen
+
+  float bposx = (WINDOW_WIDTH - ball.w)/2;
+  float bposy = (WINDOW_HEIGHT - ball.h)/2;
+
+  //give BALL initial velocity
+  float xvel = SPEED*2;
+  float yvel = SPEED*2;
+  //paddle velocity
+  float xvelp = 0;
+  float yvelp = 0;
 
   //animation loop
   bool isquit = false;
   SDL_Event event;
 
     int left,right = 0;
+  float area = dest.w*dest.h;
 
   while(!isquit){
 
@@ -131,41 +145,72 @@ int main(void){
       }
     }
 
-    if ( xpos <= 0 ){
-      xpos = 0;
+    //collision detection for window
+    if ( bposx <= 0 ){
+      bposx = 0;
       xvel = -xvel;
     }
-    if ( ypos <= 0 ){
-      ypos = 0;
+    if ( bposy <= 0 ){
+      bposy = 0;
       yvel = -yvel;
     }
-    if ( xpos >= WINDOW_WIDTH - dest.w ){
-      xpos = WINDOW_WIDTH - dest.w;
+    if ( bposx >= WINDOW_WIDTH - ball.w ){
+      bposx = WINDOW_WIDTH - ball.w;
       xvel = -xvel;
     }
-    if ( ypos >= WINDOW_HEIGHT - dest.h ){
-      ypos = WINDOW_HEIGHT - dest.h;
+    if ( bposy >= WINDOW_HEIGHT - ball.h ){
+      bposy = WINDOW_HEIGHT - ball.h;
       yvel = -yvel;
+    }
+    //collision detection for paddle
+    if(SDL_IntersectRect(&ball,&dest,&intersect) == SDL_TRUE){
+      if(intersect.y == dest.y){ //hits top of paddle
+        bposy -= intersect.h+2;
+        yvel = -yvel;
+      }
+      if(intersect.y + intersect.h == dest.y + dest.h){ //hits bottom of paddle
+        bposy += intersect.h+2;
+        yvel = -yvel;
+      }
+      if(intersect.x == dest.x){//hits left side of paddle
+        bposx -= intersect.w+2;
+        xvel = -xvel;
+      }
+      if(intersect.x + intersect.w == dest.x + dest.w){ //hits right side of paddle
+        bposx += intersect.w+2;
+        xvel = -xvel;
+      }
     }
 
-    /*
+
     if( left && !right )
-      xvel = -SPEED;
+      xvelp = -SPEED*3;
     if( right && !left )
-      xvel = SPEED;
-*/
+      xvelp = SPEED*3;
+    if( !left && !right )
+      xvelp = 0;
 
-    xpos += xvel/120;
-    ypos += yvel/120;
+    xpos += xvelp/60;
+
+    bposx += xvel/60;
+    bposy += yvel/60;
 
     dest.x = (int) xpos;
     dest.y = (int) ypos;
 
+    ball.x = (int) bposx;
+    ball.y = (int) bposy;
+
+    SDL_SetRenderDrawColor(rend,0,0,0,1);;//set render draw color to black to clear screen
     SDL_RenderClear(rend);
     SDL_RenderCopy(rend,tex,NULL,&dest);
+
+    SDL_RenderDrawRect(rend,&ball);
+    SDL_SetRenderDrawColor(rend,255,255,255,1);
+    SDL_RenderFillRect(rend,&ball);
     SDL_RenderPresent(rend);
 
-    SDL_Delay(1000/120);
+    SDL_Delay(1000/60);
   }
 
   /*
